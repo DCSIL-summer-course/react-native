@@ -4,7 +4,7 @@
 
 **If you are on a windows machine you can only develop an Android app.**
 
-**If you are on a Mac I recommend downloading [Nuclide](http://nuclide.io/docs/quick-start/getting-started/), an IDE created by Facebook for React Native**
+**If you are on a Mac I recommend downloading [Nuclide](http://nuclide.io/docs/quick-start/getting-started/), an IDE created by Facebook for React Native**.
 
 
 ## Initializing the project
@@ -99,7 +99,9 @@ const styles = StyleSheet.create({
 });
 ```
 
-React Native uses properties that are very similar to CSS and converts them to their analogues in Native. React Native also uses the Flex Box model for layout.
+React Native uses properties that are very similar to CSS and converts them to their analogues in Native. React Native also uses the Flex Box model for layout. 
+
+`flex: 1` means that the title element should take up the width of our toolbar. If there were two elements in the tool bar and each had `flex: 1` that would mean that each get's 50% of the toolbar.
 
 Finally, on the last line of `reddit-nav-bar.js` export our component:
 
@@ -139,9 +141,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    flex: 1
   }
 });
 ```
@@ -152,8 +152,112 @@ If everything is working you should see a light blue navigation bar with the tit
 
 In `components/` create the file `components/reddit-list.js`  There are several new concepts that we'll need in order to build our list of Reddit stories. We'll improve the component incrementally.
 
+First we'll start by importing the necessary modules and creating a constant to hold a couple Reddit stories for testing with.
 
+```javascript
+import React, { Component } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ListView,
+  Image
+} from 'react-native';
 
-```js
-
+const REDDIT_STORIES = [
+  {
+    title: 'Got another dog yesterday (right), he\'s settling in well!',
+    thumbnail: 'https://b.thumbs.redditmedia.com/5SOQ6sNiqEyqh48M9MOgM6sZmj-5iejiddLuRhPkWxA.jpg'},
+  {
+    title: 'We found this gal constantly stealing from our peach trees, so we named her Peaches. (Very original, I know)',
+    thumbnail: 'https://b.thumbs.redditmedia.com/8ZkujfQt-MmvxoB_oQdq5DOgT3L3VkaeBDz_O40MzTk.jpg'}
+];
 ```
+
+Next we'll create, `RedditList`, the component that will contain a `ListView` of all our Reddit top stories:
+
+```javascript
+class RedditList extends Component {
+  constructor(props){
+    super(props)
+    var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
+    this.state = {
+      dataSource: ds.cloneWithRows(REDDIT_STORIES)
+    };
+  }
+
+  renderRow(rowData){
+    return (
+      <View style={styles.row}>
+        <Image style={styles.image} source={{uri: rowData.thumbnail}} />
+        <View style={styles.rightColumn}>
+          <Text style={styles.title}>{rowData.title}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  render() {
+    return (
+      <ListView
+        enableEmptySections={true}
+        dataSource={this.state.dataSource}
+        renderRow={this.renderRow}
+      />
+    );
+  }
+}
+```
+
+In the constructor we instantiate a `DataSource` object and pass a function through that specifiies the condition for a row value changing (the condition necessary for re-rendering a row). Then we'll use the `cloneWithRows()` function, passing in our Reddit stories, to seed our dataSource. Finally, we assign this data to the component's `state` object. Components are generally more performant, and easier easier to reason, when they don't have an internal state, but sometimes it's impossible to avoid not having a state.
+
+Finally, in the bottom of the same file we'll create the `styles` and export our module:
+
+```javascript
+const styles = StyleSheet.create({
+  row: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    paddingTop: 4,
+    paddingBottom: 4,
+    flex: 1,
+    flexDirection: 'row'
+  },
+  rightColumn: {
+    flex: 1,
+    paddingLeft: 5
+  },
+  title: {
+    fontSize: 16
+  },
+  image: {
+    width: 100,
+    height: 100
+  }
+});
+
+export default RedditList;
+```
+
+In `index.*.js` you can import the new module:
+
+```javascript
+import RedditList from './components/reddit-list.js';
+```
+
+Now update the `render()` function in `NativeReddit` to include our `RedditList` component:
+
+```javascript
+render() {
+  return (
+    <View style={styles.outerContainer}>
+      <RedditNavigationBar title="Reddit" />
+      <View style={styles.container}>
+        <RedditList />
+      </View>
+    </View>
+  );
+} 
+```
+
+If everything is working you should see two Reddit stories, each with their own thumbnail.
