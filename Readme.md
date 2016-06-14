@@ -70,7 +70,7 @@ class RedditNavigationBar extends Component {
           <Text style={styles.title}>{this.title}</Text>
         </View>
       </View>
-    )
+    );
   }
 }
 ```
@@ -90,7 +90,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row'
   },
   title: {
-    width: 100,
     fontSize: 18,
     color: '#fff',
     textAlign: 'center',
@@ -101,7 +100,7 @@ const styles = StyleSheet.create({
 
 React Native uses properties that are very similar to CSS and converts them to their analogues in Native. React Native also uses the Flex Box model for layout. 
 
-`flex: 1` means that the title element should take up the width of our toolbar. If there were two elements in the tool bar and each had `flex: 1` that would mean that each get's 50% of the toolbar.
+`flex: 1` means that the title element should take up the width of our toolbar. If there were two elements in the tool bar and each had `flex: 1` that would mean that each gets 50% of the toolbar.
 
 Finally, on the last line of `reddit-nav-bar.js` export our component:
 
@@ -152,7 +151,7 @@ If everything is working you should see a light blue navigation bar with the tit
 
 In `components/` create the file `components/reddit-list.js`  There are several new concepts that we'll need in order to build our list of Reddit stories. We'll improve the component incrementally.
 
-First we'll start by importing the necessary modules and creating a constant to hold a couple Reddit stories for testing with.
+First we'll start by importing the necessary modules and creating a constant to hold a couple Reddit stories for testing.
 
 ```javascript
 import React, { Component } from 'react';
@@ -261,3 +260,196 @@ render() {
 ```
 
 If everything is working you should see two Reddit stories, each with their own thumbnail.
+
+## Moving our nav bar to the `RedditList` Component
+
+In our final app their will be a back button in the navigation bar. However, the back button will be conditional on what page is currently visible. There are several different ways we can accomplish this, but for the purpose of this workshop we're going to move `<RedditNavigationBar title="Reddit" />` from index.*.js into `RedditList`.
+
+In `reddit-list.js` add the following import:
+
+```javascript
+import RedditNavigationBar from './reddit-nav-bar.js';
+```
+
+Then update the render method to:
+
+```javascript
+render() {
+  return (
+    <View style={styles.outerContainer}>
+      <RedditNavigationBar title="Reddit" showBackButton={false}/>
+      <View style={styles.container}>
+        <ListView
+          enableEmptySections={true}
+          dataSource={this.state.dataSource}
+          renderRow={(rowData) => this.renderRow(rowData)}
+        />
+      </View>
+    </View>
+  );
+}
+```
+
+Update the style object to include:
+
+```javascript
+outerContainer: {
+  flex: 1,
+  backgroundColor: '#fff'
+},
+container: {
+  flex: 1,
+},
+```
+ 
+ In `index.*.js` update the `render()` method to:
+ 
+ ```javascript
+ render(){
+   return (
+     <RedditList />
+   );
+ }
+ ```
+ 
+Finally remove the styles constant and Style import, as they're no longer needed in `index.*.js`.
+
+You should still see the navbar with the list of 2 Reddit stories.
+  
+## Comments View
+
+When a user clicks on a single story they should be taken to the comments view for that story. To make this work we'll first create a `RedditComments` component and then we'll integrate navigation into our app. In `components/` create `reddit-comments.js` and add the following imports and const:
+
+```javascript
+import React, { Component } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ListView,
+  Image
+} from 'react-native';
+
+import RedditNavigationBar from './reddit-nav-bar.js';
+
+const REDDIT_COMMENTS = [
+  {text: 'lol'},
+  {text: 'ftw'}
+];
+```
+
+Our `RedditComments` component will be very similar to the `RedditList` component. **Try to do this on your own - it's almost the same!**
+
+### `RedditComment` Cheat
+
+```javascript
+class RedditComments extends Component {
+  constructor(props){
+    super(props);
+    var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
+    this.state = {
+      dataSource: ds.cloneWithRows(REDDIT_COMMENTS)
+    };
+  }
+
+  renderRow(rowData){
+    return (
+      <View style={styles.row}>
+        <Text>{rowData.text}</Text>
+      </View>
+    );
+  }
+
+  render(){
+    return (
+      <View style={styles.outerContainer}>
+        <RedditNavigationBar title="Reddit"/>
+        <View style={styles.container}>
+          <Text>Article!</Text>
+          <ListView
+            enableEmptySections={true}
+            dataSource={this.state.dataSource}
+            renderRow={this.renderRow}
+          />
+        </View>
+      </View>
+    );
+  }
+}
+```
+
+The styles and the export:
+
+```javascript
+const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
+  container: {
+    flex: 1,
+  },
+  row: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    paddingTop: 4,
+    paddingBottom: 4,
+    flex: 1
+  }
+});
+
+export default RedditComments;
+```
+
+You'll notice that we have the exact same `outerContainer` and `container` style defined in `reddit-list.js` and `reddit-comments.js`, we should move these to their own module and shared between pages. For this workshop we'll skip this step.
+
+In `index.*.js` add the `RedditComments` import:
+
+```javascript
+import RedditComments from './components/reddit-comments.js';
+```
+
+At this point you have no way of viewing your new comments page. Let's fix that!
+
+## App Navigation
+
+**WARNING**: React Native's Navigation is going through some big changes, what you see below may not work in versions > 0.26.x.
+
+In `index.*.js` update your `'react-native'` import to look like:
+
+```javascript
+import {
+  AppRegistry,
+  Navigator
+} from 'react-native';
+```
+
+In `NativeReddit` update the render method to use the new `Navigator` element:
+
+```javascript
+render() {
+  return (
+    <Navigator
+     initialRoute={{name: 'RedditList'}}
+     renderScene={this.renderScene}
+    />
+  );
+}
+```
+
+You'll note that we're specifying the `initialRoute` (e.g. the starting point). The name `RedditList` will make sense shortly. Next we specify a function, `this.renderScene` that will render the scene when the scene changes. We'll need to go ahead and add `renderScene` to our `NativeReddit` class.
+
+```javascript
+  renderScene(route, navigator){
+      switch (route.name) {
+        case 'RedditList':
+          return <RedditList navigator={navigator} {...route.passProps} />
+        case 'RedditComments':
+          return <RedditComments navigator={navigator} {...route.passProps} />
+        default:
+          return <RedditList navigator={navigator} {...route.passProps} />
+      }
+  }
+```
+
+`renderScene` accepts to parameters: 1) `route`, which contains the routes name, and `navigator`, an object that helps us navigate through our app. The `renderScene` function is effectly a router that matches a given "scene" for a given `route.name`. It passes the `navigator` object to that seen and it passes any parameters that may have been passed from one scene to another using the spread operator `{...route.passedParams}`.
