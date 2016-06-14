@@ -453,3 +453,115 @@ You'll note that we're specifying the `initialRoute` (e.g. the starting point). 
 ```
 
 `renderScene` accepts to parameters: 1) `route`, which contains the routes name, and `navigator`, an object that helps us navigate through our app. The `renderScene` function is effectly a router that matches a given "scene" for a given `route.name`. It passes the `navigator` object to that seen and it passes any parameters that may have been passed from one scene to another using the spread operator `{...route.passedParams}`.
+
+Now we'll make the rows in our `RedditList` clickable. Open up `reddit-list.js` and update the `'react-native'` import to:
+
+```javascript
+import {
+  StyleSheet,
+  Text,
+  View,
+  ListView,
+  Image,
+  TouchableHighlight
+} from 'react-native';
+```
+
+We're adding `TouchableHeightlight` which we'll use to make our rows clickable. Now update the `renderRow` method in `RedditList` to:
+
+```javascript
+  renderRow(rowData){
+    return (
+      <TouchableHighlight
+        onPress={() => {
+          this.props.navigator.push({
+            name: 'RedditComments',
+            passProps: rowData
+          });
+        }}
+        underlayColor='#ddd'
+      >
+        <View style={styles.row}>
+          <Image style={styles.image} source={{uri: rowData.thumbnail}} />
+          <View style={styles.rightColumn}>
+            <Text style={styles.title}>{rowData.title}</Text>
+          </View>
+        </View>
+      </TouchableHighlight>
+    );
+  }
+```
+
+Above we've added the `TouchableHighlight` element around each row. When the user presses on the row, `onPress` is called, which calls our function that pushes a new view onto the stack. The view we're pushing onto the navigation stack is the `RedditComments` view and we're passing the row's data. 
+
+At this point you should be able to click on a story and go to it's comment view (`RedditComments`). Now we need a way to go back to the `RedditList` view.
+
+### Updating `reddit-nav-bar.js` to support going back
+
+Open `reddit-nav-bar.js` and update the navbar `View` to include a back button - use the `TouchableHighlight` component. **IMPORTANT**: Be user to include the the `TouchableHighlight` import in the `'react-native'` imports!!!
+
+#### Cheat
+
+```javascript
+  render(){
+    return (
+      <View>
+        <View style={styles.toolbar}>
+          {/* Left Button */}
+          <TouchableHighlight
+            style={[styles.button, !this.props.back && styles.hide]}
+            onPress={this.props.back}
+            underlayColor='#CFE3FA'
+          >
+            <Text style={ styles.buttonText }>{'\u2039'} Back</Text>
+          </TouchableHighlight>
+          <Text style={styles.title}>{this.title}</Text>
+          {/* Right Button, helps title stay centered! */}
+          <TouchableHighlight style={[styles.button, styles.hide]}>
+            <Text></Text>
+          </TouchableHighlight>
+        </View>
+      </View>
+    )
+  }
+```
+We include two `TouchableHighlight` buttons because it makes the top layout much simpler and the title stays centered. It's also possible that we might want to put content in that right button. For both buttons we use the array notation to pass in multiple style objects. The second style object, `styles.hide`, is only there conditionally if the function `this.props.back` is defined. (e.g. if a function is based into `back={}` prop). This trick allows us to conditionally show/hide the back button depending on whether a function to go back is passed into `RedditNavigationBar`.
+
+Add the following to the styles object:
+
+```javascript
+,
+  button: {
+    width: 80,
+    backgroundColor: '#CFE3FA',
+    alignItems: 'center'
+  },
+  buttonText: {
+    fontSize:18,
+    color: '#fff',
+    backgroundColor: '#CFE3FA',
+    padding: 0,
+    margin: 0
+  },
+  hide: {
+    opacity: 0
+  }
+```
+
+At the moment our back button should be invisible. To show the back button when `RedditComments` is active open `reddit-comments.js` and update the `RedditNavigationBar`, in the `render` method, to:
+
+```javascript
+<RedditNavigationBar
+  title="Reddit"
+  back={this.props.navigator.pop}
+/>
+```
+
+Above we're passing in the function `navigator.pop`, which is part of the `this.props` object. 
+
+Your app's navigation should now be working!!!!
+
+## Adding Redux
+
+
+## Connecting the Reddit API
