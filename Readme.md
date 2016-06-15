@@ -225,12 +225,14 @@ Finally, in the bottom of the same file we'll create the `styles` and export our
 ```javascript
 const styles = StyleSheet.create({
   row: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    paddingTop: 4,
-    paddingBottom: 4,
+    marginLeft: 4,
+    marginRight: 4,
+    marginTop: 4,
+    padding: 4,
     flex: 1,
-    flexDirection: 'row'
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 2
   },
   rightColumn: {
     flex: 1,
@@ -305,7 +307,7 @@ Update the style object to include:
 ```javascript
 outerContainer: {
   flex: 1,
-  backgroundColor: '#fff'
+  backgroundColor: '#ccc'
 },
 container: {
   flex: 1,
@@ -365,7 +367,7 @@ class RedditComments extends Component {
   renderRow(rowData){
     return (
       <View style={styles.row}>
-        <Text>{rowData.body}</Text>
+        <Text style={styles.text}>{rowData.body}</Text>
       </View>
     );
   }
@@ -394,16 +396,22 @@ The styles and the export:
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#fff'
+    backgroundColor: '#ccc'
   },
   container: {
     flex: 1,
   },
   row: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    paddingTop: 4,
-    paddingBottom: 4,
+    marginLeft: 4,
+    marginRight: 4,
+    marginTop: 4,
+    padding: 4,
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 2
+  },
+  text: {
     flex: 1
   }
 });
