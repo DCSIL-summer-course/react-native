@@ -27,9 +27,19 @@ Then install the following 4 modules (`--save` saves references to each module i
 npm install redux react-redux redux-thunk isomorphic-fetch --save
 ```
 
-# Reddit Native
+# React Native
 
-[Background]
+React Native was born out of two realities for Facebook:
+
+1. Native Apps are: 
+    1. fast
+    2. they're slower to create
+    3. require different code bases for each platform.
+2. Hybrid apps (Webview) are fast to develop, but they aren't as performant.
+
+With React Native you build your application in JavaScript. The Native app runs a JavaScript engine in another thread. The JavaScript-based React app communicates with the Native part of the application asychronously. In otherwords, none of the JavaScript blocks the main UI thread.
+
+One of the motos for React Native is that it is "learn once, write anywhere" (not "write once, run anywhere". While the business logic can be shared between your React Native Android app and your iOS app the UI code will differ - sometimes not by much though. However, you can reuse your skills from one platform to the other.
 
 # Creating the Native Reddit App
 
