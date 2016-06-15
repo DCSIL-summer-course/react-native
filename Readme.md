@@ -333,8 +333,8 @@ import {
 import RedditNavigationBar from './reddit-nav-bar.js';
 
 const REDDIT_COMMENTS = [
-  {text: 'lol'},
-  {text: 'ftw'}
+  {body: 'lol'},
+  {body: 'ftw'}
 ];
 ```
 
@@ -355,7 +355,7 @@ class RedditComments extends Component {
   renderRow(rowData){
     return (
       <View style={styles.row}>
-        <Text>{rowData.text}</Text>
+        <Text>{rowData.body}</Text>
       </View>
     );
   }
@@ -563,5 +563,288 @@ Your app's navigation should now be working!!!!
 
 ## Adding Redux
 
+In `index.*.js` import the following:
 
-## Connecting the Reddit API
+```javascript
+import { createStore, applyMiddleware, combineReducers } from 'redux';
+import { connect, Provider } from 'react-redux';
+import thunkMiddleware from 'redux-thunk';
+```
+
+From the previous workshop you should be somewhat familiar with `'redux'` and `'react-redux'`. We've now added `'redux-thunk'`, which allows our application to dispatch async functions, instead of just plain objects. This will be helpful for making AJAX calls to Reddit's API.
+
+In `index.*.js`, right above your `NativeReddit` component add:
+
+```javascript
+const rootReducer = combineReducers({
+  reddit: () => { [] }
+});
+
+const store = createStore(
+  rootReducer,
+  {},
+  applyMiddleware(
+    thunkMiddleware
+  )
+);
+```
+
+The `reddit` is just a placeholder function that returns an empty array, we'll fix that later. Finally, update the `render()` method in `NativeReddit` to:
+
+```javascript
+  render() {
+    return (
+      <Provider store={store}>
+        <Navigator
+          initialRoute={{name: 'RedditList'}}
+          renderScene={this.renderScene}
+        />
+      </Provider>
+    );
+  }
+```
+The `Navigator` component is now surrounded by `'react-redux'`'s `Provider` component.
+
+### Creating the redux reducers & actions
+
+Next we're going to create the actions that will help us fetch posts and receive posts. We'll be using `'isomorphic-fetch'` which allows us to make API calls regardless of the platform we're on (web, native, server).
+
+Create a new folder called `actions/` and create a file in it called `reddit-actions.js`.
+
+In `actions/reddit-actions.js` place the following code:
+
+```javascript
+import fetch from 'isomorphic-fetch';
+
+export const RECEIVE_POSTS = 'RECEIVE_POSTS';
+
+const receivePosts = (json) => {
+  return {
+    type: RECEIVE_POSTS,
+    posts: json.data.children.map(child => child.data),
+    receivedAt: Date.now()
+  }
+}
+
+const fetchPosts = () => {
+  return dispatch => {
+    return fetch('https://www.reddit.com/top.json')
+      .then(response => response.json())
+      .then(json => dispatch(receivePosts(json)))
+  }
+}
+
+export { fetchPosts };
+```
+
+`receivePosts` is a relatively strait forward function, it takes a JSON payload, fetched from Reddit, and returns an action that we can dispatch to redux.
+
+`fetchPosts` is a little more fancy! It returns an anonymous function that takes one parameter, `dispatch`. The anonymous function returns a promise. The promise is returned from fetching the API data, turning it into json, then dispatching the `receivePosts` action when it's complete. 
+
+Create a new folder called `reducers/` then create a file in it called `reddit-reducer.js`. In `reducers/reddit-reducer.js` place:
+
+```javascript
+import { RECEIVE_POSTS } from '../actions/reddit-actions.js';
+
+const redditStoriesReducer = (state=[], action) => {
+  switch(action.type){
+    case RECEIVE_POSTS:
+      return action.posts;
+    default:
+      return state;
+  }
+}
+
+export { redditStoriesReducer };
+```
+
+### Connecting redux to our `RedditList`
+
+In `reddit-list.js` add the `react-redux` import:
+
+```javascript
+import { connect } from 'react-redux';
+```
+
+Then below the `RedditList` class, and above `const styles =` add:
+
+```javascript
+const mapStateToProps = (state) => {
+  return { posts: state.reddit };
+}
+
+RedditList = connect(mapStateToProps)(RedditList);
+```
+
+This connects redux to our component. However, our component now needs to be able to handle changes to it's state (e.g. after the API call completes). We'll update the `constructor` function in `RedditList` to use `props.posts` instead of `REDDIT_STORIES`. Next we'll add a new function to `RedditList` that will handle updates to props passed into our component:
+
+```javascript
+  componentWillReceiveProps = (nextProps) => {
+    this.setState({
+      dataSource: this.state.dataSource.cloneWithRows(nextProps.posts)
+    });
+  }
+```
+
+`componentWillReceiveProps` is a "life-cycle" function that React calls when the component receives new props.
+
+
+### Updating `index.*.js`
+
+Import the reducer and actions:
+
+```javascript
+import { redditStoriesReducer } from './reducers/reddit-reducer.js';
+import { fetchPosts } from './actions/reddit-actions.js';
+```
+
+Update the `rootReducer` to use the `redditReducer`:
+
+```javascript
+const rootReducer = combineReducers({
+  reddit: redditStoriesReducer
+});
+```
+
+Finally, at the very end of `index.*.js`, after the `AppRegistry` line add:
+
+```javascript
+// bootstrap app
+(function initialize() {
+  fetchPosts()(store.dispatch);
+})();
+```
+
+That code will load the intial data from Reddit.
+
+## Loading Comments
+
+### Adding more actions
+
+Update `reddit-actions.js` and add the following:
+
+```javascript
+export const RECEIVE_COMMENTS = 'RECEIVE_COMMENTS';
+
+const receiveComments = (json) => {
+  return {
+    type: RECEIVE_COMMENTS,
+    comments: json[1].data.children.map(child => child.data),
+    receivedAt: Date.now()
+  }
+}
+
+const fetchComments = ({subreddit, id, slug}) => {
+  var path = `/r/${subreddit}/comments/${id}/${slug}.json`;
+  var url = `http://www.reddit.com${path}`;
+
+  return dispatch => {
+    return fetch(url)
+      .then(response => response.json())
+      .then(json => dispatch(receiveComments(json)));
+  }
+}
+```
+
+then be sure to add `fetchComments` to the export:
+
+```javascript
+export { fetchPosts, fetchComments };
+```
+
+### Adding reducers
+
+In `reddit-reducers.js` update the imports to:
+
+```javascript
+import { RECEIVE_POSTS, RECEIVE_COMMENTS } from '../actions/reddit-actions.js';
+```
+
+Then add the following reducer:
+
+```javascript
+const redditCommentsReducer = (state=[], action) => {
+  switch (action.type) {
+    case RECEIVE_COMMENTS:
+      return action.comments
+    default:
+      return state;
+  }
+}
+```
+
+Finally add the new reducer to the exports:
+
+```javascript
+export { redditStoriesReducer, redditCommentsReducer };
+```
+
+In `index.*.js` update the import state for the reducers to look like:
+
+```javascript
+import { redditStoriesReducer, redditCommentsReducer } from './reducers/reddit-reducer.js';
+```
+
+Then update the `rootReducer`:
+
+```javascript
+const rootReducer = combineReducers({
+  reddit: redditStoriesReducer,
+  comments: redditCommentsReducer
+});
+```
+
+### Connecting our `RedditComments` to redux
+
+First import `'react-redux'` and the new action we created above:
+
+```javascript
+import { connect } from 'react-redux';
+import { fetchComments } from '../actions/reddit-actions.js';
+```
+
+Below `RedditComments` add the following code to connect `RedditComments` to redux:
+
+```javascript
+const mapStateToProps = (state) => {
+  return { comments: state.comments };
+}
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+    fetchComments: (redditStory) => {
+      return fetchComments(redditStory)(dispatch);
+    }
+  }
+}
+
+RedditComments = connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(RedditComments);
+```
+
+`mapStateToProps` maps redux's state object to the params passed into `RedditComments`. `mapDispatchToPros` allows us to pass a function into `RedditComments`, a function that has access to the `redux`'s dispatch function. 
+
+Finally we'll update `RedditComments`. First alter dataSource line in the `constructor` to:
+
+```javascript
+dataSource: ds.cloneWithRows(this.props.comments)
+```
+
+Then add the following two functions to `RedditComments`:
+
+```javascript
+  componentDidMount() {
+    this.props.fetchComments(this.props);
+  };
+
+  componentWillReceiveProps = (nextProps) => {
+    this.setState({
+      dataSource: this.state.dataSource.cloneWithRows(nextProps.comments)
+    });
+  }
+```
+
+You should be familiar with `componentWillReceiveProps` from above. `componentDidMount` is a nother life cycle function that's called after the component is mounted - it's the recommend spot for triggering AJAX calls.
+
